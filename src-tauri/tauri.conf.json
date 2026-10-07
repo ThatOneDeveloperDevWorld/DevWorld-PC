@@ -1,0 +1,30 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/schema.json",
+  "productName": "Dev World PC",
+  "version": "1.0.0",
+  "identifier": "com.thatonedev.devworldpc",
+  "build": {
+    "frontendDist": "../res"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Dev World PC",
+        "width": 900,
+        "height": 550,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "images/launcher.png"
+    ]
+  }
+}
