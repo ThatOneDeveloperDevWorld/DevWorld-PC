@@ -1,4 +1,4 @@
-name: Build Dev World PC (Portable)
+name: Build Dev World PC (Raw Exe)
 
 on:
   push:
@@ -27,12 +27,17 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Build Portable Windows Executable
+      - name: Install Tauri CLI
+        run: npm install --save-dev @tauri-apps/cli
+
+      - name: Build Raw Windows Executable
         run: npx tauri build --no-bundle
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DevWorld-Portable-Windows
+          name: DevWorld-Raw-Exe
           path: src-tauri/target/release/*.exe
           
