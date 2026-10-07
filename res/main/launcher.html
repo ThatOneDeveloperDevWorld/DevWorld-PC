@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dev World - Launcher</title>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+
+    <style>
+        /* Theme Variables */
+        :root {
+            --sidebar-bg: rgba(240, 240, 240, 0.85);
+            --sidebar-border: #cccccc;
+            --text-color: #000000;
+            --subtext-color: #555555;
+            --nav-hover: rgba(0, 0, 0, 0.08);
+            --nav-active: rgba(0, 0, 0, 0.15);
+            --profile-bg: rgba(255, 255, 255, 0.8);
+            --box-bg: rgba(255, 255, 255, 0.9);
+            --dropdown-bg: #ffffff;
+            --border-color: #000000;
+        }
+
+        [data-theme="dark"] {
+            --sidebar-bg: rgba(0, 0, 0, 0.75);
+            --sidebar-border: #333333;
+            --text-color: #ffffff;
+            --subtext-color: #aaaaaa;
+            --nav-hover: rgba(255, 255, 255, 0.1);
+            --nav-active: rgba(255, 255, 255, 0.15);
+            --profile-bg: rgba(255, 255, 255, 0.1);
+            --box-bg: rgba(0, 0, 0, 0.8);
+            --dropdown-bg: #1e1e1e;
+            --border-color: #ffffff;
+        }
+
+        * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: var(--text-color);
+            
+            background-image: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('../images/launcher.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            transition: color 0.3s ease;
+        }
+
+        /* Left Sidebar */
+        .sidebar {
+            width: 220px;
+            background: var(--sidebar-bg);
+            backdrop-filter: blur(8px);
+            border-right: 3px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px 15px;
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+
+        .sidebar-top {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .game-title-sidebar {
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--sidebar-border);
+            text-align: center;
+            color: var(--text-color);
+        }
+
+        .nav-item {
+            background: transparent;
+            border: 2px solid transparent;
+            color: var(--text-color);
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 800;
+            font-size: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .nav-item.active, .nav-item:hover {
+            background: var(--nav-active);
+            border-color: var(--border-color);
+        }
+
+        /* Profile Section at Bottom of Sidebar */
+        .profile-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--profile-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .profile-section:active {
+            transform: scale(0.98);
+        }
+        .profile-section img {
+            width: 32px; height: 32px; border: 2px solid var(--border-color); border-radius: 6px; object-fit: cover;
+        }
+        .profile-info {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .profile-info span {
+            font-size: 11px; color: var(--subtext-color); font-weight: 700;
+        }
+        .profile-info strong {
+            font-size: 13px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-color);
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: flex-end;
+            padding: 30px;
+            position: relative;
+        }
+
+        /* Top Right Controls */
+        .top-right-controls {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .theme-btn {
+            background: var(--box-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            padding: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 3px 3px 0px var(--border-color);
+        }
+        .theme-btn img {
+            width: 24px; height: 24px;
+        }
+
+        /* Bottom Control Bar */
+        .play-row {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+            max-width: 600px;
+            justify-content: flex-end;
+        }
+
+        /* Version Selector Dropdown */
+        .version-dropdown-container {
+            position: relative;
+        }
+        
+        .version-box {
+            background: var(--box-bg);
+            border: 3px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px 20px;
+            font-size: 16px;
+            font-weight: 900;
+            color: var(--text-color);
+            box-shadow: 4px 4px 0px var(--border-color);
+            font-family: monospace;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            right: 0;
+            margin-bottom: 8px;
+            background: var(--dropdown-bg);
+            border: 3px solid var(--border-color);
+            border-radius: 10px;
+            width: 180px;
+            box-shadow: 4px 4px 0px var(--border-color);
+            z-index: 10;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+        .dropdown-item {
+            padding: 10px 15px;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            border-bottom: 1px solid var(--sidebar-border);
+            color: var(--text-color);
+        }
+        .dropdown-item:hover {
+            background: #5ce1e6;
+            color: #000;
+        }
+
+        /* Massive Play Button */
+        .open-btn {
+            background: #55ff55;
+            border: 4px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 60px;
+            font-size: 26px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 6px 6px 0px var(--border-color);
+            color: #000 !important;
+            letter-spacing: 1px;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+        .open-btn:active {
+            transform: translate(3px, 3px);
+            box-shadow: 3px 3px 0px var(--border-color);
+        }
+
+        /* Auth Modal Overlay */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-card {
+            background: var(--box-bg);
+            border: 4px solid var(--border-color);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 380px;
+            padding: 24px;
+            box-shadow: 8px 8px 0px var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            position: relative;
+        }
+        .modal-title {
+            font-size: 18px;
+            font-weight: 900;
+            margin: 0;
+            text-align: center;
+            text-transform: uppercase;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            text-align: left;
+        }
+        .input-label {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--subtext-color);
+        }
+        .input-field {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--dropdown-bg);
+            color: var(--text-color);
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .modal-btn {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            font-weight: 900;
+            font-size: 14px;
+            cursor: pointer;
+            background: #55ff55;
+            color: #000;
+            box-shadow: 3px 3px 0px var(--border-color);
+            margin-top: 5px;
+        }
+        .modal-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px var(--border-color);
+        }
+        .modal-toggle {
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-weight: 800;
+            font-size: 12px;
+            cursor: pointer;
+            text-decoration: underline;
+            margin-top: 5px;
+        }
+        .error-msg {
+            color: #ff595e;
+            font-size: 12px;
+            font-weight: 800;
+            margin: 0;
+            min-height: 16px;
+            text-align: center;
+        }
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 14px;
+            background: none;
+            border: none;
+            font-size: 18px;
+            font-weight: 900;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+    </style>
+</head>
+<body data-theme="dark">
+
+    <!-- Left Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-top">
+            <div class="game-title-sidebar">DEV WORLD</div>
+            <button class="nav-item active">Play</button>
+            <button class="nav-item" onclick="window.open('https://github.com/ThatOneDeveloperDevWorld/DevWorld-PC/releases/latest')">Releases</button>
+            <button class="nav-item" onclick="window.open('https://discord.gg/hDqN8MPTkj')">Community</button>
+        </div>
+
+        <!-- Profile Box at Bottom of Sidebar -->
+        <div class="profile-section" id="profile-trigger" onclick="openAuthModal()">
+            <img id="pfp-img" src="https://raw.githubusercontent.com/ThatOneDeveloperDevWorld/devworldsource/main/profiledefault.png" alt="PFP">
+            <div class="profile-info">
+                <span id="profile-status-label">Account</span>
+                <strong id="username-text">Click to Sign In</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Right Content -->
+    <div class="main-content">
+        <!-- Top Right Theme Toggle -->
+        <div class="top-right-controls">
+            <button class="theme-btn" id="theme-toggle-btn" onclick="toggleTheme()">
+                <img id="theme-icon" src="../images/Light.png" alt="Toggle Theme">
+            </button>
+        </div>
+
+        <!-- Bottom Play Row -->
+        <div class="play-row">
+            <div class="version-dropdown-container">
+                <div class="version-box" id="version-selector-btn">
+                    <span>Latest</span>
+                    <span id="current-version-text" style="color: #00b4d8;">Loading...</span>
+                    <span>▲</span>
+                </div>
+                <div class="dropdown-menu" id="releases-dropdown"></div>
+            </div>
+
+            <button id="open-btn" class="open-btn">PLAY</button>
+        </div>
+    </div>
+
+    <!-- Authentication / Account Modal -->
+    <div class="modal-overlay" id="auth-modal">
+        <div class="modal-card">
+            <button class="close-modal" onclick="closeAuthModal()">×</button>
+            <h3 class="modal-title" id="modal-heading">Sign In</h3>
+            
+            <p class="error-msg" id="auth-error"></p>
+
+            <div class="input-group" id="username-group" style="display: none;">
+                <label class="input-label">USERNAME</label>
+                <input type="text" id="signup-username" class="input-field" placeholder="Choose a username...">
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">EMAIL</label>
+                <input type="email" id="auth-email" class="input-field" placeholder="Enter your email...">
+            </div>
+
+            <div class="input-group">
+                <label class="input-label">PASSWORD</label>
+                <input type="password" id="auth-password" class="input-field" placeholder="Enter your password...">
+            </div>
+
+            <button class="modal-btn" id="auth-submit-btn" onclick="handleAuthSubmit()">Sign In</button>
+            <button class="modal-toggle" id="auth-switch-btn" onclick="toggleAuthMode()">Need an account? Sign up</button>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyDlHHkVs9AVAAknCAMknG_dAYzAIU9eGSA",
+            authDomain: "dev-world-c65f5.firebaseapp.com",
+            projectId: "dev-world-c65f5",
+            storageBucket: "dev-world-c65f5.firebasestorage.app",
+            messagingSenderId: "961103609829",
+            appId: "1:961103609829:web:ea87f9d0eb63dfde13790c"
+        };
+
+        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        let selectedVersion = "";
+        let isSignUpMode = false;
+
+        // Auth State Listener
+        auth.onAuthStateChanged(async (user) => {
+            const usernameEl = document.getElementById("username-text");
+            const statusLabelEl = document.getElementById("profile-status-label");
+
+            if (user) {
+                statusLabelEl.innerText = "Logged in as";
+                try {
+                    const userDoc = await db.collection("users").doc(user.uid).get();
+                    if (userDoc.exists && userDoc.data().username) {
+                        usernameEl.innerText = userDoc.data().username;
+                    } else {
+                        usernameEl.innerText = user.email.split('@')[0];
+                    }
+                } catch (e) {
+                    usernameEl.innerText = user.email.split('@')[0];
+                }
+            } else {
+                statusLabelEl.innerText = "Account";
+                usernameEl.innerText = "Click to Sign In";
+            }
+        });
+
+        function openAuthModal() {
+            auth.currentUser ? showAccountManager() : document.getElementById("auth-modal").style.display = "flex";
+        }
+
+        function closeAuthModal() {
+            document.getElementById("auth-modal").style.display = "none";
+            document.getElementById("auth-error").innerText = "";
+        }
+
+        function toggleAuthMode() {
+            isSignUpMode = !isSignUpMode;
+            document.getElementById("modal-heading").innerText = isSignUpMode ? "Create Account" : "Sign In";
+            document.getElementById("auth-submit-btn").innerText = isSignUpMode ? "Sign Up" : "Sign In";
+            document.getElementById("auth-switch-btn").innerText = isSignUpMode ? "Already have an account? Sign in" : "Need an account? Sign up";
+            document.getElementById("username-group").style.display = isSignUpMode ? "flex" : "none";
+            document.getElementById("auth-error").innerText = "";
+        }
+
+        async function handleAuthSubmit() {
+            const email = document.getElementById("auth-email").value.trim();
+            const password = document.getElementById("auth-password").value;
+            const username = document.getElementById("signup-username").value.trim();
+            const errorEl = document.getElementById("auth-error");
+
+            errorEl.innerText = "";
+
+            if (!email || !password || (isSignUpMode && !username)) {
+                errorEl.innerText = "Please fill in all fields.";
+                return;
+            }
+
+            try {
+                if (isSignUpMode) {
+                    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                    await db.collection("users").doc(userCredential.user.uid).set({
+                        username: username,
+                        email: email,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } else {
+                    await auth.signInWithEmailAndPassword(email, password);
+                }
+                closeAuthModal();
+            } catch (err) {
+                errorEl.innerText = err.message;
+            }
+        }
+
+        async function showAccountManager() {
+            if (confirm("You are currently signed in as " + document.getElementById("username-text").innerText + ". Would you like to sign out?")) {
+                await auth.signOut();
+            }
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.getElementById("theme-icon");
+            if (body.getAttribute("data-theme") === "dark") {
+                body.setAttribute("data-theme", "light");
+                themeIcon.src = "../images/Dark.png";
+            } else {
+                body.setAttribute("data-theme", "dark");
+                themeIcon.src = "../images/Light.png";
+            }
+        }
+
+        const dropdownBtn = document.getElementById("version-selector-btn");
+        const dropdownMenu = document.getElementById("releases-dropdown");
+
+        dropdownBtn.onclick = (e) => {
+            e.stopPropagation();
+            dropdownMenu.style.display = dropdownMenu.style.display === "block" ? "none" : "block";
+        };
+
+        window.onclick = () => { dropdownMenu.style.display = "none"; };
+
+        // Fetch releases directly from GitHub repository API
+        async function loadReleases() {
+            try {
+                let releases = [];
+                if (window.electronAPI && window.electronAPI.getReleases) {
+                    releases = await window.electronAPI.getReleases();
+                } else {
+                    const response = await fetch("https://api.github.com/repos/ThatOneDeveloperDevWorld/DevWorld-PC/releases");
+                    const data = await response.json();
+                    releases = data.map(rel => ({ tag: rel.tag_name || rel.tag }));
+                }
+
+                dropdownMenu.innerHTML = "";
+                if (releases && releases.length > 0) {
+                    selectedVersion = releases[0].tag;
+                    document.getElementById("current-version-text").innerText = selectedVersion;
+                    
+                    releases.forEach(rel => {
+                        const item = document.createElement("div");
+                        item.className = "dropdown-item";
+                        item.innerText = rel.tag;
+                        item.onclick = () => {
+                            selectedVersion = rel.tag;
+                            document.getElementById("current-version-text").innerText = selectedVersion;
+                        };
+                        dropdownMenu.appendChild(item);
+                    });
+                } else {
+                    document.getElementById("current-version-text").innerText = "v0.1.5";
+                    selectedVersion = "v0.1.5";
+                }
+            } catch (err) {
+                console.error("Failed to load releases from GitHub:", err);
+                document.getElementById("current-version-text").innerText = "v0.1.5";
+                selectedVersion = "v0.1.5";
+            }
+        }
+        loadReleases();
+
+        document.getElementById("open-btn").onclick = async () => {
+            if (window.electronAPI && window.electronAPI.launchVersion) {
+                const success = await window.electronAPI.launchVersion(selectedVersion);
+                if (!success) {
+                    console.error("Failed to launch version cache.");
+                }
+            } else {
+                alert("Launching version: " + selectedVersion);
+            }
+        };
+    </script>
+</body>
+</html>
