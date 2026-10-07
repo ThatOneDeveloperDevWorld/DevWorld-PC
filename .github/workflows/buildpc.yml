@@ -1,4 +1,4 @@
-name: Build Dev World PC
+name: Build Dev World PC (Portable)
 
 on:
   push:
@@ -18,18 +18,21 @@ jobs:
         with:
           node-version: 20
 
-      - name: Clean Install & Upgrade Builder
-        run: |
-          npm install
-          npm install --save-dev electron-builder@latest
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
 
-      - name: Build Windows Installer
-        run: npx electron-builder --win --x64
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Portable Windows Executable
+        run: npx tauri build --no-bundle
 
       - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: DevWorld-Windows-Installer
-          path: dist/*.exe
+          name: DevWorld-Portable-Windows
+          path: src-tauri/target/release/*.exe
+          
