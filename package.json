@@ -1,0 +1,31 @@
+{
+  "name": "devworld-pc",
+  "version": "1.0.0",
+  "description": "Dev World Desktop PC Launcher",
+  "author": "ThatOneDev",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --publish=never"
+  },
+  "build": {
+    "appId": "com.devworld.pclauncher",
+    "productName": "Dev World",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "package.json",
+      "res/**/*"
+    ]
+  },
+  "devDependencies": {
+    "electron": "28.0.0",
+    "electron-builder": "24.0.0"
+  }
+}
