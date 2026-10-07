@@ -18,10 +18,10 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
+      - name: Clean Install & Upgrade Builder
         run: |
           npm install
-          npm install --save-dev electron electron-builder
+          npm install --save-dev electron-builder@latest
 
       - name: Build Windows Installer
         run: npx electron-builder --win --x64
