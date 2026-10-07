@@ -32,8 +32,6 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "res/images/launcher.png",
-      "uninstallerIcon": "res/images/launcher.png",
       "artifactName": "${productName}-Setup-${version}.${ext}"
     }
   }
