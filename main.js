@@ -1,8 +1,7 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
-const { spawn } = require('child_process');
 
 let mainWindow;
 
@@ -10,7 +9,7 @@ function createWindow() {
     mainWindow = new BrowserWindow({
         width: 900,
         height: 550,
-        resizable: false,
+        resizable: true,
         frame: true,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
@@ -19,12 +18,12 @@ function createWindow() {
         }
     });
 
+    Menu.setApplicationMenu(null);
     mainWindow.loadFile('res/main/launcher.html');
 }
 
 app.whenReady().then(() => {
     createWindow();
-
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
@@ -34,29 +33,34 @@ app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') app.quit();
 });
 
-// Versions Directory inside User Data
-const versionsDir = path.join(app.getPath('userData'), 'game_versions');
-if (!fs.existsSync(versionsDir)) {
-    fs.mkdirSync(versionsDir, { recursive: true });
-}
+const cacheDir = path.join(app.getPath('userData'), 'cache');
+if (!fs.existsSync(cacheDir)) {
+    fs.mkdirSync(cacheDir, { recursive: true });
+});
 
-// Fetch GitHub releases natively if needed from main process
+// Fixed GitHub API URL for your repository releases
 ipcMain.handle('get-github-releases', async () => {
     return new Promise((resolve) => {
-        const url = 'https://api.github.com/repos/ThatOneDeveloperDevWorld/DevWorld-PC/releases';
+        const url = 'https://api.github.com/repos/ThatOneDeveloper/DevWorld-PC/releases';
         https.get(url, { headers: { 'User-Agent': 'DevWorld-Launcher' } }, (res) => {
             let data = '';
             res.on('data', chunk => data += chunk);
             res.on('end', () => {
                 try {
                     const releases = JSON.parse(data);
-                    const formatted = releases.map(rel => {
-                        const asset = rel.assets.find(a => a.name.endsWith('.exe')) || rel.assets[0];
-                        return {
-                            tag: rel.tag_name || rel.name,
-                            url: asset ? asset.browser_download_url : null
-                        };
-                    });
+                    if (!Array.isArray(releases)) {
+                        resolve([]);
+                        return;
+                    }
+                    const formatted = releases.map(rel => ({
+                        tag: rel.tag_name || rel.name,
+                        name: rel.name || rel.tag_name,
+                        body: rel.body || "No release notes provided.",
+                        assets: (rel.assets || []).map(asset => ({
+                            name: asset.name,
+                            url: asset.browser_download_url
+                        }))
+                    }));
                     resolve(formatted);
                 } catch (e) {
                     resolve([]);
@@ -66,34 +70,35 @@ ipcMain.handle('get-github-releases', async () => {
     });
 });
 
-// Handle version launch / download on demand when PLAY is pressed
-ipcMain.handle('launch-version', async (event, versionTag, fileUrl) => {
+ipcMain.handle('launch-version', async (event, versionTag, assets) => {
     const safeVersionTag = versionTag.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const versionFolder = path.join(versionsDir, safeVersionTag);
-    const exePath = path.join(versionFolder, 'DevWorld.exe');
+    const versionFolder = path.join(cacheDir, safeVersionTag);
+    const entryPoint = path.join(versionFolder, 'index.html');
 
-    // 1. If already cached, run it immediately
-    if (fs.existsSync(exePath)) {
-        runGameExecutable(exePath);
-        return { success: true };
+    const isCached = fs.existsSync(entryPoint);
+
+    if (!isCached) {
+        if (!assets || assets.length === 0) {
+            return { success: false, error: "No files found for this version release." };
+        }
+
+        if (!fs.existsSync(versionFolder)) {
+            fs.mkdirSync(versionFolder, { recursive: true });
+        }
+
+        try {
+            for (const file of assets) {
+                const filePath = path.join(versionFolder, file.name);
+                await downloadFile(file.url, filePath);
+            }
+        } catch (err) {
+            return { success: false, error: err.message };
+        }
     }
 
-    // 2. Otherwise download into its own folder
-    if (!fileUrl) {
-        return { success: false, error: "No download URL provided for this version." };
-    }
-
-    if (!fs.existsSync(versionFolder)) {
-        fs.mkdirSync(versionFolder, { recursive: true });
-    }
-
-    try {
-        await downloadFile(fileUrl, exePath);
-        runGameExecutable(exePath);
-        return { success: true };
-    } catch (err) {
-        return { success: false, error: err.message };
-    }
+    mainWindow.loadFile(entryPoint);
+    mainWindow.setFullScreen(true);
+    return { success: true };
 });
 
 function downloadFile(url, destination) {
@@ -106,11 +111,10 @@ function downloadFile(url, destination) {
             }
 
             if (response.statusCode !== 200) {
-                return reject(new Error(`Failed to download, status code: ${response.statusCode}`));
+                return reject(new Error(`Failed to download ${url} (Status: ${response.statusCode})`));
             }
 
             response.pipe(fileStream);
-
             fileStream.on('finish', () => {
                 fileStream.close(resolve);
             });
@@ -118,9 +122,4 @@ function downloadFile(url, destination) {
             fs.unlink(destination, () => reject(err));
         });
     });
-}
-
-function runGameExecutable(exePath) {
-    const child = spawn(exePath, [], { detached: true, stdio: 'ignore' });
-    child.unref();
 }
