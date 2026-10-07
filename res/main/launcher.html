@@ -302,8 +302,10 @@
         async function loadReleases() {
             try {
                 let releases = [];
-                // Fixed mapping to point correctly to window.electronAPI.getReleases via preload
-                if (window.electronAPI && window.electronAPI.getReleases) {
+                // Updated to support Tauri's core invoke bridge
+                if (window.__TAURI__ && window.__TAURI__.core) {
+                    releases = await window.__TAURI__.core.invoke('get_github_releases');
+                } else if (window.electronAPI && window.electronAPI.getReleases) {
                     releases = await window.electronAPI.getReleases();
                 }
 
@@ -365,11 +367,18 @@
             playBtn.innerText = "WORKING...";
 
             try {
-                const result = await window.electronAPI.launchVersion(selectedVersion, selectedAssets);
-                if (!result.success) {
-                    alert("Error: " + (result.error || "Could not launch version."));
-                    playBtn.innerText = "PLAY";
+                if (window.__TAURI__ && window.__TAURI__.core) {
+                    await window.__TAURI__.core.invoke('launch_version', {
+                        versionTag: selectedVersion,
+                        assets: selectedAssets
+                    });
+                } else if (window.electronAPI) {
+                    const result = await window.electronAPI.launchVersion(selectedVersion, selectedAssets);
+                    if (!result.success) {
+                        alert("Error: " + (result.error || "Could not launch version."));
+                    }
                 }
+                playBtn.innerText = "PLAY";
             } catch (err) {
                 alert("Error: " + err.message);
                 playBtn.innerText = "PLAY";
