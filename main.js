@@ -19,7 +19,7 @@ function createWindow() {
         }
     });
 
-    mainWindow.loadFile('renderer/launcher.html');
+    mainWindow.loadFile('res/main/launcher.html');
 }
 
 app.whenReady().then(() => {
