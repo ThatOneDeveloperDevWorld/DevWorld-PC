@@ -1,31 +1,40 @@
 {
   "name": "devworld-pc",
+  "productName": "Dev World PC",
   "version": "1.0.0",
-  "description": "Dev World Desktop PC Launcher",
-  "author": "ThatOneDev",
+  "description": "Dev World PC Launcher",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --publish=never"
+    "build": "electron-builder --win --x64"
   },
-  "build": {
-    "appId": "com.devworld.pclauncher",
-    "productName": "Dev World",
-    "directories": {
-      "output": "dist"
-    },
-    "win": {
-      "target": "nsis"
-    },
-    "files": [
-      "main.js",
-      "preload.js",
-      "package.json",
-      "res/**/*"
-    ]
+  "dependencies": {
+    "firebase": "8.10.0"
   },
   "devDependencies": {
     "electron": "28.0.0",
-    "electron-builder": "24.0.0"
+    "electron-builder": "24.9.0"
+  },
+  "build": {
+    "appId": "com.thatonedev.devworldpc",
+    "productName": "Dev World PC",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "images/launcher.png",
+      "uninstallerIcon": "images/launcher.png",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    }
   }
 }
