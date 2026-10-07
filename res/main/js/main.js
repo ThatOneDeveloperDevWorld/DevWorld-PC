@@ -1,95 +1,251 @@
-const { app, BrowserWindow, dialog } = require('electron');
-const https = require('https');
-const crypto = require('crypto');
-const fs = require('fs');
+const { app, BrowserWindow, ipcMain } = require('electron');
+
 const path = require('path');
+
+const fs = require('fs');
+
+const https = require('https');
+
+const { spawn } = require('child_process');
+
+
 
 let mainWindow;
 
-function fetchRemoteText(url) {
-  return new Promise((resolve, reject) => {
-    https.get(url, { headers: { 'User-Agent': 'DevWorld-Launcher' } }, (res) => {
-      if (res.statusCode !== 200) {
-        reject(new Error(`Failed to fetch: ${res.statusCode}`));
-        return;
-      }
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => resolve(data));
-    }).on('error', reject);
-  });
-}
 
-function getFileHash(filePath) {
-  const fileBuffer = fs.readFileSync(filePath);
-  return crypto.createHash('sha256').update(fileBuffer).digest('hex');
-}
-
-async function verifyHtmlFiles() {
-  try {
-    const releaseApiUrl = 'https://api.github.com/repos/ThatOneDeveloperDevWorld/DevWorld-PC/releases/latest';
-    const releaseData = JSON.parse(await fetchRemoteText(releaseApiUrl));
-    const tagName = releaseData.tag_name;
-
-    // Pointing directly to launcher.html
-    const htmlFilesToCheck = ['res/main/launcher.html'];
-
-    for (const relativePath of htmlFilesToCheck) {
-      const localFullPath = path.join(__dirname, relativePath);
-      
-      if (!fs.existsSync(localFullPath)) {
-        throw new Error("Local file missing");
-      }
-
-      const localHash = getFileHash(localFullPath);
-      const rawFileUrl = `https://raw.githubusercontent.com/ThatOneDeveloperDevWorld/DevWorld-PC/${tagName}/${relativePath}`;
-      const remoteContent = await fetchRemoteText(rawFileUrl);
-      const remoteHash = crypto.createHash('sha256').update(remoteContent).digest('hex');
-
-      if (localHash !== remoteHash) {
-        return false; // Mismatch found
-      }
-    }
-    return true;
-  } catch (error) {
-    console.error("Verification error:", error);
-    return true; // Allows offline play if GitHub cannot be reached
-  }
-}
 
 function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    backgroundColor: '#5ce1e6',
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true
-    },
-    autoHideMenuBar: true
-  });
 
-  // Loads launcher.html first inside res/main/
-  mainWindow.loadFile(path.join(__dirname, 'res/main/launcher.html'));
+    mainWindow = new BrowserWindow({
+
+        width: 900,
+
+        height: 550,
+
+        resizable: false,
+
+        frame: true,
+
+        webPreferences: {
+
+            preload: path.join(__dirname, 'preload.js'),
+
+            nodeIntegration: false,
+
+            contextIsolation: true
+
+        }
+
+    });
+
+
+
+    mainWindow.loadFile('res/main/launcher.html');
+
 }
 
-app.whenReady().then(async () => {
-  const isMatch = await verifyHtmlFiles();
 
-  if (!isMatch) {
-    dialog.showErrorBox("Launch Failed", "launch failed - changes found");
-    require('electron').shell.openExternal('https://github.com/ThatOneDeveloperDevWorld/DevWorld-PC/releases/latest');
-    app.quit();
-    return;
-  }
 
-  createWindow();
+app.whenReady().then(() => {
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
+    createWindow();
+
+
+
+    app.on('activate', () => {
+
+        if (BrowserWindow.getAllWindows().length === 0) createWindow();
+
+    });
+
 });
+
+
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+
+    if (process.platform !== 'darwin') app.quit();
+
 });
+
+
+
+// Versions Directory inside User Data
+
+const versionsDir = path.join(app.getPath('userData'), 'game_versions');
+
+if (!fs.existsSync(versionsDir)) {
+
+    fs.mkdirSync(versionsDir, { recursive: true });
+
+}
+
+
+
+// Fetch GitHub releases natively if needed from main process
+
+ipcMain.handle('get-github-releases', async () => {
+
+    return new Promise((resolve) => {
+
+        const url = 'https://api.github.com/repos/ThatOneDeveloperDevWorld/DevWorld-PC/releases';
+
+        https.get(url, { headers: { 'User-Agent': 'DevWorld-Launcher' } }, (res) => {
+
+            let data = '';
+
+            res.on('data', chunk => data += chunk);
+
+            res.on('end', () => {
+
+                try {
+
+                    const releases = JSON.parse(data);
+
+                    const formatted = releases.map(rel => {
+
+                        const asset = rel.assets.find(a => a.name.endsWith('.exe')) || rel.assets[0];
+
+                        return {
+
+                            tag: rel.tag_name || rel.name,
+
+                            url: asset ? asset.browser_download_url : null
+
+                        };
+
+                    });
+
+                    resolve(formatted);
+
+                } catch (e) {
+
+                    resolve([]);
+
+                }
+
+            });
+
+        }).on('error', () => resolve([]));
+
+    });
+
+});
+
+
+
+// Handle version launch / download on demand when PLAY is pressed
+
+ipcMain.handle('launch-version', async (event, versionTag, fileUrl) => {
+
+    const safeVersionTag = versionTag.replace(/[^a-zA-Z0-9.-]/g, '_');
+
+    const versionFolder = path.join(versionsDir, safeVersionTag);
+
+    const exePath = path.join(versionFolder, 'DevWorld.exe');
+
+
+
+    // 1. If already cached, run it immediately
+
+    if (fs.existsSync(exePath)) {
+
+        runGameExecutable(exePath);
+
+        return { success: true };
+
+    }
+
+
+
+    // 2. Otherwise download into its own folder
+
+    if (!fileUrl) {
+
+        return { success: false, error: "No download URL provided for this version." };
+
+    }
+
+
+
+    if (!fs.existsSync(versionFolder)) {
+
+        fs.mkdirSync(versionFolder, { recursive: true });
+
+    }
+
+
+
+    try {
+
+        await downloadFile(fileUrl, exePath);
+
+        runGameExecutable(exePath);
+
+        return { success: true };
+
+    } catch (err) {
+
+        return { success: false, error: err.message };
+
+    }
+
+});
+
+
+
+function downloadFile(url, destination) {
+
+    return new Promise((resolve, reject) => {
+
+        const fileStream = fs.createWriteStream(destination);
+
+        
+
+        https.get(url, { headers: { 'User-Agent': 'DevWorld-Launcher' } }, (response) => {
+
+            if (response.statusCode === 302 || response.statusCode === 301) {
+
+                return downloadFile(response.headers.location, destination).then(resolve).catch(reject);
+
+            }
+
+
+
+            if (response.statusCode !== 200) {
+
+                return reject(new Error(`Failed to download, status code: ${response.statusCode}`));
+
+            }
+
+
+
+            response.pipe(fileStream);
+
+
+
+            fileStream.on('finish', () => {
+
+                fileStream.close(resolve);
+
+            });
+
+        }).on('error', (err) => {
+
+            fs.unlink(destination, () => reject(err));
+
+        });
+
+    });
+
+}
+
+
+
+function runGameExecutable(exePath) {
+
+    const child = spawn(exePath, [], { detached: true, stdio: 'ignore' });
+
+    child.unref();
+
+}
