@@ -29,7 +29,6 @@
       "package.json"
     ],
     "win": {
-      "icon": "res/images/launcher.ico",
       "target": [
         "nsis"
       ]
@@ -37,8 +36,6 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "installerIcon": "res/images/launcher.ico",
-      "uninstallerIcon": "res/images/launcher.ico",
       "artifactName": "${productName}-Setup-${version}.${ext}"
     }
   }
