@@ -1,134 +1,126 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
-const https = require('https');
-const fs = require('fs');
+const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
-const extract = require('extract-zip');
+const fs = require('fs');
+const https = require('https');
+const { spawn } = require('child_process');
 
 let mainWindow;
 
-function fetchJson(url) {
-  return new Promise((resolve, reject) => {
-    https.get(url, { headers: { 'User-Agent': 'DevWorld-Launcher' } }, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try { resolve(JSON.parse(data)); } catch (e) { reject(e); }
-      });
-    }).on('error', reject);
-  });
-}
-
-function downloadFile(url, destPath) {
-  return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(destPath);
-    https.get(url, { headers: { 'User-Agent': 'DevWorld-Launcher' } }, (res) => {
-      if (res.statusCode !== 200) {
-        reject(new Error(`Failed to download: Status ${res.statusCode}`));
-        return;
-      }
-      res.pipe(file);
-      file.on('finish', () => {
-        file.close(resolve);
-      });
-    }).on('error', (err) => {
-      fs.unlink(destPath, () => reject(err));
-    });
-  });
-}
-
-// Fetch GitHub releases
-ipcMain.handle('get-releases', async () => {
-  try {
-    const releases = await fetchJson('https://api.github.com/repos/ThatOneDeveloperDevWorld/DevWorld-PC/releases');
-    return releases.map(r => ({
-      tag: r.tag_name,
-      zipballUrl: r.zipball_url
-    }));
-  } catch (err) {
-    console.error("Failed to fetch releases:", err);
-    return [{ tag: "0.1.6", zipballUrl: "" }];
-  }
-});
-
-// Cache and Load version from devworldpc/cache/version.devworld
-ipcMain.handle('launch-version', async (event, version) => {
-  const cacheFolder = path.join(__dirname, 'cache', `${version}.devworld`);
-  const targetHtml = path.join(cacheFolder, 'res', 'main', 'index.html');
-
-  // If already cached, load it directly
-  if (fs.existsSync(targetHtml)) {
-    mainWindow.loadFile(targetHtml);
-    return true;
-  }
-
-  try {
-    fs.mkdirSync(cacheFolder, { recursive: true });
-    const zipPath = path.join(cacheFolder, 'temp.zip');
-
-    // Fetch release details to grab the correct download URL
-    const releases = await fetchJson('https://api.github.com/repos/ThatOneDeveloperDevWorld/DevWorld-PC/releases');
-    const targetRelease = releases.find(r => r.tag_name === version);
-
-    if (!targetRelease || !targetRelease.zipball_url) {
-      dialog.showErrorBox("Download Error", `Could not find release archive for version ${version}.`);
-      return false;
-    }
-
-    // Download zip from GitHub repository
-    await downloadFile(targetRelease.zipball_url, zipPath);
-
-    // Extract zip contents into cache directory
-    await extract(zipPath, { dir: cacheFolder });
-    fs.unlinkSync(zipPath); // Clean up temp zip file
-
-    // GitHub zipballs wrap contents inside a subfolder (e.g. user-repo-hash/), let's handle normalization if needed
-    const subdirs = fs.readdirSync(cacheFolder).filter(f => fs.statSync(path.join(cacheFolder, f)).isDirectory());
-    if (subdirs.length === 1) {
-      const innerPath = path.join(cacheFolder, subdirs[0]);
-      const innerFiles = fs.readdirSync(innerPath);
-      innerFiles.forEach(file => {
-        fs.renameSync(path.join(innerPath, file), path.join(cacheFolder, file));
-      });
-      fs.rmdirSync(innerPath);
-    }
-
-    if (fs.existsSync(targetHtml)) {
-      mainWindow.loadFile(targetHtml);
-      return true;
-    } else {
-      dialog.showErrorBox("Launch Error", "Cached files structure mismatch.");
-      return false;
-    }
-  } catch (err) {
-    console.error("Caching failed:", err);
-    dialog.showErrorBox("Error", `Failed to download version ${version}: ${err.message}`);
-    return false;
-  }
-});
-
 function createWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    backgroundColor: '#ffffff',
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false
-    },
-    autoHideMenuBar: true
-  });
+    mainWindow = new BrowserWindow({
+        width: 900,
+        height: 550,
+        resizable: false,
+        frame: true,
+        webPreferences: {
+            preload: path.join(__dirname, 'preload.js'),
+            nodeIntegration: false,
+            contextIsolation: true
+        }
+    });
 
-  mainWindow.loadFile(path.join(__dirname, 'res/main/launcher.html'));
+    mainWindow.loadFile('renderer/launcher.html');
 }
 
 app.whenReady().then(() => {
-  createWindow();
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
-  });
+    createWindow();
+
+    app.on('activate', () => {
+        if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    });
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+    if (process.platform !== 'darwin') app.quit();
 });
+
+// Versions Directory inside User Data
+const versionsDir = path.join(app.getPath('userData'), 'game_versions');
+if (!fs.existsSync(versionsDir)) {
+    fs.mkdirSync(versionsDir, { recursive: true });
+}
+
+// Fetch GitHub releases natively if needed from main process
+ipcMain.handle('get-github-releases', async () => {
+    return new Promise((resolve) => {
+        const url = 'https://api.github.com/repos/ThatOneDeveloperDevWorld/DevWorld-PC/releases';
+        https.get(url, { headers: { 'User-Agent': 'DevWorld-Launcher' } }, (res) => {
+            let data = '';
+            res.on('data', chunk => data += chunk);
+            res.on('end', () => {
+                try {
+                    const releases = JSON.parse(data);
+                    const formatted = releases.map(rel => {
+                        const asset = rel.assets.find(a => a.name.endsWith('.exe')) || rel.assets[0];
+                        return {
+                            tag: rel.tag_name || rel.name,
+                            url: asset ? asset.browser_download_url : null
+                        };
+                    });
+                    resolve(formatted);
+                } catch (e) {
+                    resolve([]);
+                }
+            });
+        }).on('error', () => resolve([]));
+    });
+});
+
+// Handle version launch / download on demand when PLAY is pressed
+ipcMain.handle('launch-version', async (event, versionTag, fileUrl) => {
+    const safeVersionTag = versionTag.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const versionFolder = path.join(versionsDir, safeVersionTag);
+    const exePath = path.join(versionFolder, 'DevWorld.exe');
+
+    // 1. If already cached, run it immediately
+    if (fs.existsSync(exePath)) {
+        runGameExecutable(exePath);
+        return { success: true };
+    }
+
+    // 2. Otherwise download into its own folder
+    if (!fileUrl) {
+        return { success: false, error: "No download URL provided for this version." };
+    }
+
+    if (!fs.existsSync(versionFolder)) {
+        fs.mkdirSync(versionFolder, { recursive: true });
+    }
+
+    try {
+        await downloadFile(fileUrl, exePath);
+        runGameExecutable(exePath);
+        return { success: true };
+    } catch (err) {
+        return { success: false, error: err.message };
+    }
+});
+
+function downloadFile(url, destination) {
+    return new Promise((resolve, reject) => {
+        const fileStream = fs.createWriteStream(destination);
+        
+        https.get(url, { headers: { 'User-Agent': 'DevWorld-Launcher' } }, (response) => {
+            if (response.statusCode === 302 || response.statusCode === 301) {
+                return downloadFile(response.headers.location, destination).then(resolve).catch(reject);
+            }
+
+            if (response.statusCode !== 200) {
+                return reject(new Error(`Failed to download, status code: ${response.statusCode}`));
+            }
+
+            response.pipe(fileStream);
+
+            fileStream.on('finish', () => {
+                fileStream.close(resolve);
+            });
+        }).on('error', (err) => {
+            fs.unlink(destination, () => reject(err));
+        });
+    });
+}
+
+function runGameExecutable(exePath) {
+    const child = spawn(exePath, [], { detached: true, stdio: 'ignore' });
+    child.unref();
+}
