@@ -359,7 +359,7 @@
             document.getElementById("releases-modal").style.display = "none";
         }
 
-        document.getElementById("open-btn").onclick = async () => {
+                document.getElementById("open-btn").onclick = async () => {
             if (!selectedVersion || !selectedAssets.length) {
                 alert("Please select a valid version first!");
                 return;
@@ -369,14 +369,18 @@
             playBtn.innerText = "LAUNCHING...";
 
             try {
-                // Calls the Rust backend to cache the files and return the local path to editor.html
-                const entryPointPath = await window.__TAURI__.core.invoke("launch_version", {
+                // Use window.__TAURI__.invoke directly
+                const entryPointPath = await window.__TAURI__.invoke("launch_version", {
                     versionTag: selectedVersion,
                     assets: selectedAssets
                 });
 
-                // Open or load the local editor.html file path safely via Tauri protocol conversion
-                window.location.href = window.__TAURI__.core.convertFileSrc(entryPointPath);
+                // Use window.__TAURI__.convertFileSrc directly (or fallback if it's attached elsewhere)
+                const assetUrl = window.__TAURI__.convertFileSrc 
+                    ? window.__TAURI__.convertFileSrc(entryPointPath) 
+                    : `http://asset.localhost/${entryPointPath}`;
+
+                window.location.href = assetUrl;
             } catch (err) {
                 alert("Error launching version: " + err);
                 playBtn.innerText = "PLAY";
