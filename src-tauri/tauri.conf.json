@@ -24,7 +24,7 @@
     "active": true,
     "targets": "all",
     "icon": [
-      "images/launcher.png"
+      "res/main/images/launcher.png"
     ]
   }
 }
