@@ -35,13 +35,11 @@ jobs:
       - name: Install Frontend Dependencies
         run: npm install
 
-              - name: Install Frontend Dependencies
-        run: npm install
+      - name: Install Tauri CLI
+        run: npm install --save-dev @tauri-apps/cli
 
-      - name: Generate Default Icons
+      - name: Generate App Icons
         run: npx tauri icon res/images/launcher.png
-        # (Or if you don't have a launcher.png yet, any placeholder image or running it will set up the structure)
-        
 
       - name: Build Tauri App
         uses: tauri-apps/tauri-action@v0
