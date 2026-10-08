@@ -24,7 +24,7 @@ async fn get_github_releases() -> Result<Vec<Release>, String> {
         .build()
         .map_err(|e| e.to_string())?;
 
-    let url = "https://api.github.com/repos/ThatOneDeveloper/DevWorld-PC/releases";
+    let url = "https://api.github.com/repos/ThatOneDeveloperDevWorld/DevWorld-PC/releases";
     let resp = client.get(url).send().await.map_err(|e| e.to_string())?;
     
     if !resp.status().is_success() {
@@ -62,7 +62,7 @@ async fn get_github_releases() -> Result<Vec<Release>, String> {
 async fn launch_version(app: tauri::AppHandle, version_tag: String, assets: Vec<Asset>) -> Result<String, String> {
     let app_dir = app.path().app_cache_dir().map_err(|e| e.to_string())?;
     
-    // Use the exact version_tag string for the folder name (e.g. cache/0.1.5/)
+    // Uses the exact version tag for the folder (e.g., cache/0.1.5/)
     let version_folder = app_dir.join("cache").join(&version_tag);
     let entry_point = version_folder.join("index.html");
 
