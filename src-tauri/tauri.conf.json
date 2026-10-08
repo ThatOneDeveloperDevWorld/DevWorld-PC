@@ -7,7 +7,6 @@
     "frontendDist": "../res/main"
   },
   "app": {
-    "WithGlobalTauri": true,
     "windows": [
       {
         "title": "Dev World PC",
@@ -25,7 +24,7 @@
     "active": true,
     "targets": "all",
     "icon": [
-      "images/launcher.png"
+      "../res/main/images/launcher.png"
     ]
   }
 }
