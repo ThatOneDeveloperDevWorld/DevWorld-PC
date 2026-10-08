@@ -1,7 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::fs;
-use std::path::PathBuf;
 use tauri::Manager;
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -18,7 +17,6 @@ struct Release {
     assets: Vec<Asset>,
 }
 
-// Fetch GitHub releases from your repository
 #[tauri::command]
 async fn get_github_releases() -> Result<Vec<Release>, String> {
     let client = reqwest::Client::builder()
@@ -60,12 +58,12 @@ async fn get_github_releases() -> Result<Vec<Release>, String> {
     Ok(releases)
 }
 
-// Download assets and launch the version
 #[tauri::command]
-async fn launch_version(app: tauri::AppHandle, version_tag: String, assets: Vec<Asset>) -> Result<(), String> {
+async fn launch_version(app: tauri::AppHandle, version_tag: String, assets: Vec<Asset>) -> Result<String, String> {
     let app_dir = app.path().app_cache_dir().map_err(|e| e.to_string())?;
-    let safe_tag = version_tag.replace(|c: char| !c.is_alphanumeric() && c != '.' && c != '-', "_");
-    let version_folder = app_dir.join("cache").join(safe_tag);
+    
+    // Use the exact version_tag string for the folder name (e.g. cache/0.1.5/)
+    let version_folder = app_dir.join("cache").join(&version_tag);
     let entry_point = version_folder.join("index.html");
 
     if !entry_point.exists() {
@@ -88,8 +86,7 @@ async fn launch_version(app: tauri::AppHandle, version_tag: String, assets: Vec<
         }
     }
 
-    // Open game window or load entry point
-    Ok(())
+    Ok(entry_point.to_string_lossy().to_string())
 }
 
 fn main() {
@@ -97,5 +94,4 @@ fn main() {
         .invoke_handler(tauri::generate_handler![get_github_releases, launch_version])
         .run(tauri::generate_context!())
         .expect("error while running application");
-      }
-
+}
