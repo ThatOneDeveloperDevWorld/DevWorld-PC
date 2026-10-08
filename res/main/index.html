@@ -359,6 +359,7 @@
             document.getElementById("releases-modal").style.display = "none";
         }
 
+                
                 document.getElementById("open-btn").onclick = async () => {
             if (!selectedVersion || !selectedAssets.length) {
                 alert("Please select a valid version first!");
@@ -369,23 +370,37 @@
             playBtn.innerText = "LAUNCHING...";
 
             try {
-                // Use window.__TAURI__.invoke directly
-                const entryPointPath = await window.__TAURI__.invoke("launch_version", {
+                // Safely locate the invoke function across different Tauri global inject structures
+                const tauriInvoke = window.__TAURI__?.invoke || 
+                                    window.__TAURI__?.core?.invoke || 
+                                    (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke);
+
+                if (!tauriInvoke) {
+                    throw new Error("Tauri invoke API is not available in this window environment.");
+                }
+
+                // Calls the Rust backend to cache the files and return the local path to editor.html
+                const entryPointPath = await tauriInvoke("launch_version", {
                     versionTag: selectedVersion,
                     assets: selectedAssets
                 });
 
-                // Use window.__TAURI__.convertFileSrc directly (or fallback if it's attached elsewhere)
-                const assetUrl = window.__TAURI__.convertFileSrc 
-                    ? window.__TAURI__.convertFileSrc(entryPointPath) 
+                // Safely locate the file protocol converter function
+                const convertSrc = window.__TAURI__?.convertFileSrc || 
+                                   window.__TAURI__?.core?.convertFileSrc;
+
+                const assetUrl = convertSrc 
+                    ? convertSrc(entryPointPath) 
                     : `http://asset.localhost/${entryPointPath}`;
 
+                // Open/load the local editor.html file path
                 window.location.href = assetUrl;
             } catch (err) {
-                alert("Error launching version: " + err);
+                alert("Error launching version: " + err.message || err);
                 playBtn.innerText = "PLAY";
             }
         };
+        
     </script>
 </body>
 </html>
