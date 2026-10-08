@@ -6,7 +6,8 @@
   "description": "Dev World PC Launcher",
   "scripts": {
     "dev": "tauri dev",
-    "build": "tauri build"
+    "build": "tauri build",
+    "tauri": "tauri"
   },
   "dependencies": {
     "firebase": "8.10.0"
