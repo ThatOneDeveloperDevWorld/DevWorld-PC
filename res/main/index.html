@@ -299,7 +299,6 @@
         };
         window.onclick = () => { dropdownMenu.style.display = "none"; };
 
-        // Fetch GitHub releases directly from DevWorld-PC repository via GitHub REST API
         async function loadReleases() {
             try {
                 const response = await fetch('https://api.github.com/repos/ThatOneDeveloperDevWorld/DevWorld-PC/releases');
@@ -309,7 +308,7 @@
                     cachedReleasesData = data.map(rel => ({
                         tag: rel.tag_name,
                         body: rel.body,
-                        assets: rel.assets
+                        assets: rel.assets.map(a => ({ name: a.name, url: a.browser_download_url }))
                     }));
 
                     selectedVersion = cachedReleasesData[0].tag;
@@ -361,8 +360,8 @@
         }
 
         document.getElementById("open-btn").onclick = async () => {
-            if (!selectedVersion) {
-                alert("Please select a version first!");
+            if (!selectedVersion || !selectedAssets.length) {
+                alert("Please select a valid version first!");
                 return;
             }
 
@@ -370,16 +369,16 @@
             playBtn.innerText = "LAUNCHING...";
 
             try {
-                const targetAsset = selectedAssets.find(a => a.name.includes("index.html") || a.name.endsWith(".zip") || a.name.endsWith(".html")) || selectedAssets[0];
-                
-                if (targetAsset && targetAsset.browser_download_url) {
-                    window.location.href = targetAsset.browser_download_url;
-                } else {
-                    alert("Selected version has no valid download asset link.");
-                    playBtn.innerText = "PLAY";
-                }
+                // Calls the Rust backend to cache the files and return the local path to editor.html
+                const entryPointPath = await window.__TAURI__.core.invoke("launch_version", {
+                    versionTag: selectedVersion,
+                    assets: selectedAssets
+                });
+
+                // Open or load the local editor.html file path safely via Tauri protocol conversion
+                window.location.href = window.__TAURI__.core.convertFileSrc(entryPointPath);
             } catch (err) {
-                alert("Error: " + (err.message || err));
+                alert("Error launching version: " + err);
                 playBtn.innerText = "PLAY";
             }
         };
