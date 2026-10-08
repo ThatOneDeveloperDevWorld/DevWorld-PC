@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "identifier": "com.thatonedev.devworldpc",
   "build": {
-    "frontendDist": "../res"
+    "frontendDist": "../res/main"
   },
   "app": {
     "windows": [
