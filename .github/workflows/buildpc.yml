@@ -39,7 +39,7 @@ jobs:
         run: npm install --save-dev @tauri-apps/cli
 
       - name: Generate App Icons
-        run: npx tauri icon res/images/icon.png
+        run: npx tauri icon res/images/launcher.png
 
       - name: Build Tauri App
         uses: tauri-apps/tauri-action@v0
@@ -48,7 +48,9 @@ jobs:
         with:
           tagName: v1.0.0-__BUILD__
           releaseName: "Dev World PC Build"
-          releaseBody: "Automated build Dev World PC."
+          releaseBody: "Automated portable build of Dev World PC."
           releaseDraft: false
           prerelease: true
+          args: "--no-bundle"
+          uploadPlainBinary: true
           
