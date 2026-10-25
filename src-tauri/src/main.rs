@@ -14,12 +14,12 @@ async fn launch_version(app: tauri::AppHandle, version_tag: String, assets: Vec<
     // Points to the user's desktop or local app cache directory structured as devworldpc/cache/<version_tag>
     let base_dir = app.path().cache_dir().map_err(|e| e.to_string())?;
     let version_folder = base_dir.join("devworldpc").join("cache").join(&version_tag);
-    let entry_point = version_folder.join("editor.html");
+    let entry_point = version_folder.join("index.html");
 
     // Check if it's already downloaded, if not download it
     if !entry_point.exists() {
         if assets.is_empty() {
-            return Err("No files found for this version release.".into());
+            return Err("No files found for this version.".into());
         }
 
         fs::create_dir_all(&version_folder).map_err(|e| e.to_string())?;
