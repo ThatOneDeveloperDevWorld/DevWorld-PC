@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dev World - Launcher</title>
 
-    <!-- Google Fonts: Cherry Bomb One -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cherry+Bomb+One&display=swap" rel="stylesheet">
@@ -15,462 +14,224 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
 
     <style>
-        :root {
-            --bg-color: #ffffff;
-            --box-bg: #ffffff;
-            --text-color: #000000;
-            --subtext-color: #000000;
-            --border-color: #000000;
-            --nav-bg: #f4f4f4;
-            --nav-active: #5ce1e6;
-        }
-
-        [data-theme="dark"] {
-            --bg-color: #121212;
-            --box-bg: #1a1a1a;
-            --text-color: #ffffff;
-            --subtext-color: #ffffff;
-            --border-color: #ffffff;
-            --nav-bg: #1e1e1e;
-            --nav-active: #5ce1e6;
-        }
-
         * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
         
         body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
+            margin: 0; padding: 0; width: 100vw; height: 100vh;
             overflow: hidden; font-family: 'Cherry Bomb One', cursive, sans-serif;
-            letter-spacing: 1px; color: var(--text-color);
-            background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://raw.githubusercontent.com/ThatOneDeveloperDevWorld/devworldsource/main/Untitled338_20260812133205.png');
-            background-size: cover; background-position: center; background-repeat: no-repeat;
-            display: flex; flex-direction: column;
+            letter-spacing: 1px; color: #000000;
+            display: flex; position: relative;
         }
 
-        /* Loading Screen */
-        #loading-screen {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://raw.githubusercontent.com/ThatOneDeveloperDevWorld/devworldsource/main/Untitled338_20260812133205.png');
-            background-size: cover; background-position: center; background-repeat: no-repeat;
-            z-index: 9999; display: flex; flex-direction: column;
-            justify-content: center; align-items: center; color: #ffffff;
-            transition: opacity 0.4s ease;
-        }
-        .loading-content { text-align: center; display: flex; flex-direction: column; align-items: center; gap: 20px; }
-        .loading-logo { height: 560px; object-fit: contain; filter: drop-shadow(8px 8px 0px #000000); }
-        .loading-status-text { font-size: 28px; color: #ffffff; text-shadow: 4px 4px 0px #000000; }
-
-        /* Standalone Huge Top Logo (4x Scaled) */
-        .top-logo-header {
-            width: 100%; display: flex; justify-content: center;
-            align-items: center; padding-top: 15px; z-index: 40;
-        }
-        .top-logo-img {
-            height: 520px; object-fit: contain;
-            filter: drop-shadow(8px 8px 0px #000000);
+        /* Fullscreen launcher.png background image */
+        .launcher-bg-image {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            z-index: 1;
+            pointer-events: none;
         }
 
-        /* Bottom Navigation Bar */
-        .bottom-nav {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            height: 85px; background: var(--nav-bg);
-            border-top: 4px solid var(--border-color); display: flex;
-            align-items: center; justify-content: space-between; padding: 0 35px;
-            z-index: 50; box-shadow: 0px -6px 0px rgba(0,0,0,0.3);
+        /* Black Tint Overlay Layer */
+        .launcher-tint-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.4); /* Black tint */
+            z-index: 2;
+            pointer-events: none;
         }
 
-        .nav-left { display: flex; align-items: center; gap: 15px; }
-        .nav-items { display: flex; gap: 15px; }
-        .nav-item {
-            background: var(--box-bg); border: 3px solid var(--border-color); color: var(--text-color);
-            padding: 12px 22px; text-align: center; font-size: 16px;
-            border-radius: 8px; cursor: pointer; 
-            box-shadow: 4px 4px 0px var(--border-color);
-            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        /* Left Navigation Bar (Matches Mockup) */
+        .sidebar-left {
+            width: 220px; height: 100%;
+            border-right: 4px solid #000000;
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; gap: 25px; padding: 20px 15px;
+            z-index: 10;
+        }
+
+        .sidebar-btn {
+            width: 100%; max-width: 170px; padding: 16px 10px;
+            background: #ffffff; border: 4px solid #000000;
+            border-radius: 12px; font-size: 18px; color: #000000;
             font-family: 'Cherry Bomb One', cursive, sans-serif;
+            text-align: center; cursor: pointer;
+            box-shadow: 4px 4px 0px #000000;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
         }
-        .nav-item:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0px var(--border-color); }
-        .nav-item.active { background: #55ff55; color: #000000; }
-
-        .nav-right { display: flex; align-items: center; gap: 15px; }
-
-        /* Main Content Area */
-        .main-content { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding-bottom: 95px; position: relative; }
-        .top-right-controls { position: absolute; top: 20px; right: 30px; display: flex; align-items: center; gap: 15px; z-index: 50; }
-        
-        .theme-btn { 
-            background: var(--box-bg); border: 3px solid var(--border-color); border-radius: 8px; 
-            cursor: pointer; padding: 8px; display: flex; box-shadow: 4px 4px 0px var(--border-color); 
+        .sidebar-btn:active {
+            transform: translate(2px, 2px); box-shadow: 2px 2px 0px #000000;
         }
-        .theme-btn img { width: 24px; height: 24px; }
 
-        .play-row { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 100%; max-width: 650px; }
-        .play-controls-group { display: flex; align-items: center; gap: 20px; justify-content: center; width: 100%; }
-
-        .version-dropdown-container { position: relative; }
-        .version-box {
-            background: var(--box-bg); border: 4px solid var(--border-color); border-radius: 12px;
-            padding: 18px 24px; font-size: 20px; color: var(--text-color);
-            box-shadow: 6px 6px 0px var(--border-color); cursor: pointer;
-            display: flex; align-items: center; gap: 20px;
+        /* Center Section (Logo & Play Button) */
+        .main-center {
+            flex: 1; height: 100%; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; position: relative;
+            z-index: 10;
         }
+
+        .center-logo {
+            max-width: 480px; width: 70%; height: auto;
+            margin-bottom: 30px; filter: drop-shadow(6px 6px 0px #000000);
+        }
+
+        .play-btn {
+            width: 260px; padding: 18px; background: #ffffff;
+            border: 4px solid #000000; border-radius: 16px;
+            font-size: 36px; color: #000000;
+            font-family: 'Cherry Bomb One', cursive, sans-serif;
+            cursor: pointer; box-shadow: 6px 6px 0px #000000;
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+            text-align: center;
+        }
+        .play-btn:active {
+            transform: translate(3px, 3px); box-shadow: 3px 3px 0px #000000;
+        }
+
+        /* Bottom Control Box (Version Selector) */
+        .bottom-version-box {
+            position: absolute; bottom: 25px; left: 245px;
+            display: flex; align-items: center; gap: 15px; z-index: 20;
+        }
+
+        .version-control-card {
+            background: #ffffff; border: 4px solid #000000;
+            border-radius: 12px; padding: 10px 16px; font-size: 18px;
+            display: flex; align-items: center; gap: 15px;
+            box-shadow: 4px 4px 0px #000000; position: relative;
+        }
+
+        .select-ver-btn {
+            background: #cceecc; border: 2px solid #000000;
+            border-radius: 6px; padding: 4px 10px; font-size: 12px;
+            font-family: 'Cherry Bomb One', cursive, sans-serif;
+            cursor: pointer; box-shadow: 2px 2px 0px #000000;
+        }
+
         .dropdown-menu {
-            display: none; position: absolute; bottom: 100%; right: 0; margin-bottom: 10px;
-            background: var(--box-bg); border: 4px solid var(--border-color); border-radius: 10px;
-            width: 200px; box-shadow: 6px 6px 0px var(--border-color); z-index: 100; max-height: 200px; overflow-y: auto;
+            display: none; position: absolute; bottom: 115%; left: 0;
+            background: #ffffff; border: 4px solid #000000;
+            border-radius: 10px; width: 220px; box-shadow: 4px 4px 0px #000000;
+            z-index: 100; max-height: 180px; overflow-y: auto;
         }
-        .dropdown-item { padding: 12px 18px; font-size: 16px; cursor: pointer; border-bottom: 2px solid var(--border-color); color: var(--text-color); }
-        .dropdown-item:hover { background: #55ff55; color: #000000; }
+        .dropdown-item {
+            padding: 10px; font-size: 15px; cursor: pointer;
+            border-bottom: 2px solid #000000; color: #000000;
+        }
+        .dropdown-item:hover { background: #55ff55; }
 
-        .path-box {
-            background: var(--box-bg); border: 3px solid var(--border-color); border-radius: 10px;
-            padding: 10px 18px; font-size: 13px; font-family: 'Segoe UI', sans-serif; font-weight: 800;
-            display: flex; align-items: center; gap: 12px; cursor: pointer; box-shadow: 4px 4px 0px var(--border-color);
-            color: var(--text-color);
+        .launcher-version-tag {
+            position: absolute; bottom: 15px; right: 20px;
+            font-size: 13px; color: #ffffff; opacity: 0.8; z-index: 20;
+            text-shadow: 2px 2px 0px #000000;
         }
-
-        .open-btn {
-            background: #55ff55; border: 4px solid var(--border-color); border-radius: 12px;
-            padding: 18px 70px; font-size: 32px; cursor: pointer;
-            box-shadow: 6px 6px 0px var(--border-color); color: #000000 !important;
-            transition: transform 0.1s ease, box-shadow 0.1s ease;
-            font-family: 'Cherry Bomb One', cursive, sans-serif;
-        }
-        .open-btn:active { transform: translate(3px, 3px); box-shadow: 3px 3px 0px var(--border-color); }
 
         /* Modals */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(4px); z-index: 200; justify-content: center; align-items: center; }
-        .modal-card { background: var(--box-bg); border: 4px solid var(--border-color); border-radius: 16px; width: 100%; max-width: 400px; padding: 28px; box-shadow: 8px 8px 0px var(--border-color); display: flex; flex-direction: column; gap: 18px; position: relative; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .modal-title { font-size: 22px; font-weight: 900; margin: 0; text-align: center; text-transform: uppercase; font-family: 'Cherry Bomb One', cursive; color: var(--text-color); }
-        .input-group { display: flex; flex-direction: column; gap: 6px; text-align: left; }
-        .input-label { font-size: 12px; font-weight: 900; color: var(--subtext-color); }
-        .input-field { width: 100%; padding: 12px 14px; border: 3px solid var(--border-color); border-radius: 8px; background: var(--box-bg); color: var(--text-color); font-weight: 800; font-size: 15px; }
-        .modal-btn { width: 100%; padding: 14px; border: 3px solid var(--border-color); border-radius: 10px; font-weight: 900; font-size: 16px; cursor: pointer; background: #55ff55; color: #000000; box-shadow: 4px 4px 0px var(--border-color); font-family: 'Cherry Bomb One', cursive; }
-        .modal-toggle { background: none; border: none; color: var(--text-color); font-weight: 800; font-size: 13px; cursor: pointer; text-decoration: underline; }
-        .error-msg { color: var(--text-color); font-size: 13px; font-weight: 900; margin: 0; min-height: 18px; text-align: center; }
-        .close-modal { position: absolute; top: 12px; right: 16px; background: #55ff55; border: 2px solid var(--border-color); width: 28px; height: 28px; border-radius: 6px; font-size: 16px; font-weight: 900; cursor: pointer; color: #000000; display: flex; align-items: center; justify-content: center; box-shadow: 2px 2px 0px var(--border-color); }
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%; background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px); z-index: 200;
+            justify-content: center; align-items: center;
+        }
+        .modal-card {
+            background: #ffffff; border: 4px solid #000000;
+            border-radius: 16px; width: 90%; max-width: 420px;
+            padding: 24px; box-shadow: 8px 8px 0px #000000;
+            display: flex; flex-direction: column; gap: 15px;
+            position: relative; text-align: center;
+        }
+        .close-modal {
+            position: absolute; top: 10px; right: 12px;
+            background: #ff595e; border: 2px solid #000000;
+            border-radius: 6px; width: 26px; height: 26px;
+            cursor: pointer; font-family: 'Cherry Bomb One', cursive;
+        }
+
+        .install-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #f4f4f4; border: 2px solid #000000; padding: 10px;
+            border-radius: 8px; margin-bottom: 8px; font-size: 16px;
+        }
+        .del-btn {
+            background: #ff595e; color: #fff; border: 2px solid #000000;
+            border-radius: 6px; padding: 4px 8px; font-size: 12px;
+            cursor: pointer; font-family: 'Cherry Bomb One', cursive;
+        }
+
+        .spinoff-card {
+            display: flex; flex-direction: column; align-items: center;
+            border: 3px solid #000000; border-radius: 10px; padding: 12px;
+            background: #f8f8f8; gap: 8px;
+        }
+        .spinoff-img { width: 100%; max-height: 140px; object-fit: contain; border-radius: 6px; }
+        .coming-soon-badge {
+            background: #ffb703; color: #000000; border: 2px solid #000000;
+            padding: 4px 10px; border-radius: 12px; font-size: 12px;
+        }
     </style>
 </head>
-<body data-theme="dark">
+<body>
 
-    <!-- Loading Screen Preloader -->
-    <div id="loading-screen">
-        <div class="loading-content">
-            <img src="https://raw.githubusercontent.com/ThatOneDeveloperDevWorld/devworldsource/main/logo1.png" alt="Dev World Logo" class="loading-logo">
-            <div id="loading-status" class="loading-status-text">Loading...</div>
+    <!-- Background Image & Black Tint Overlay -->
+    <img src="images/launcher.png" alt="Launcher Background" class="launcher-bg-image">
+    <div class="launcher-tint-overlay"></div>
+
+    <!-- Left Navigation Bar -->
+    <div class="sidebar-left">
+        <button class="sidebar-btn" onclick="openInstallationsModal()">INSTALLATIONS</button>
+        <button class="sidebar-btn" onclick="openSpinoffsModal()">SPINOFFS</button>
+        <button class="sidebar-btn" onclick="openDiscord()">DISCORD</button>
+    </div>
+
+    <!-- Main Center Area -->
+    <div class="main-center">
+        <img src="https://raw.githubusercontent.com/ThatOneDeveloperDevWorld/devworldsource/main/logo1.png" alt="Dev World Logo" class="center-logo" onerror="this.src='Devworldlogobeta.png'">
+        <button id="play-btn" class="play-btn">PLAY</button>
+    </div>
+
+    <!-- Bottom Controls -->
+    <div class="bottom-version-box">
+        <div class="version-control-card">
+            <span id="current-version-text">Loading...</span>
+            <button class="select-ver-btn" id="version-selector-btn">SELECT VERSION</button>
+            <div class="dropdown-menu" id="releases-dropdown"></div>
         </div>
     </div>
 
-    <!-- Standalone Huge Top Logo (4x Scaled) -->
-    <div class="top-logo-header">
-        <img src="https://raw.githubusercontent.com/ThatOneDeveloperDevWorld/devworldsource/main/logo1.png" alt="Dev World Logo" class="top-logo-img">
-    </div>
+    <div class="launcher-version-tag">Launcher v1.0.0</div>
 
-    <div class="top-right-controls">
-        <button class="theme-btn" id="theme-toggle-btn" onclick="toggleTheme()">
-            <img id="theme-icon" src="images/Light.png" alt="Toggle Theme">
-        </button>
-    </div>
-
-    <div class="main-content">
-        <div class="play-row">
-            <div class="play-controls-group">
-                <div class="version-dropdown-container">
-                    <div class="version-box" id="version-selector-btn">
-                        <span>Latest</span>
-                        <span id="current-version-text" style="color: var(--text-color);">Loading...</span>
-                        <span>▲</span>
-                    </div>
-                    <div class="dropdown-menu" id="releases-dropdown"></div>
-                </div>
-
-                <button id="open-btn" class="open-btn">PLAY</button>
-            </div>
-
-            <!-- Download Path Display -->
-            <div class="path-box" onclick="selectDownloadFolder()">
-                <span>DOWNLOAD PATH:</span>
-                <span id="download-path-text" style="color: var(--text-color);">Default (Desktop)</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Bottom Navigation Bar -->
-    <div class="bottom-nav">
-        <div class="nav-left">
-            <div class="nav-items">
-                <button class="nav-item active">Play</button>
-                <button class="nav-item" onclick="openReleasesModal()">Releases</button>
-                <button class="nav-item" onclick="openSettingsModal()">Settings</button>
-                <button class="nav-item" onclick="window.open('https://discord.gg/hDqN8MPTkj')">Community</button>
-            </div>
-        </div>
-
-        <div class="nav-right">
-            <button class="nav-item" id="account-nav-btn" onclick="openAuthModal()">
-                <span id="account-btn-text">Sign In</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- Auth Modal (Sign In / Sign Up) -->
-    <div class="modal-overlay" id="auth-modal">
+    <!-- Installations Modal -->
+    <div class="modal-overlay" id="installations-modal">
         <div class="modal-card">
-            <button class="close-modal" onclick="closeAuthModal()">X</button>
-            <h3 class="modal-title" id="modal-heading">Sign In</h3>
-            <p class="error-msg" id="auth-error"></p>
-            <div class="input-group" id="username-group" style="display: none;">
-                <label class="input-label">USERNAME</label>
-                <input type="text" id="signup-username" class="input-field" placeholder="Choose a username...">
-            </div>
-            <div class="input-group">
-                <label class="input-label">EMAIL</label>
-                <input type="email" id="auth-email" class="input-field" placeholder="Enter your email...">
-            </div>
-            <div class="input-group">
-                <label class="input-label">PASSWORD</label>
-                <input type="password" id="auth-password" class="input-field" placeholder="Enter your password...">
-            </div>
-            <button class="modal-btn" id="auth-submit-btn" onclick="handleAuthSubmit()">Sign In</button>
-            <button class="modal-toggle" id="auth-switch-btn" onclick="toggleAuthMode()">Need an account? Sign up</button>
+            <button class="close-modal" onclick="closeInstallationsModal()">X</button>
+            <h3 style="margin: 0; font-size: 22px;">INSTALLED VERSIONS</h3>
+            <div id="installations-list" style="max-height: 220px; overflow-y: auto; text-align: left; padding: 5px;"></div>
         </div>
     </div>
 
-    <!-- Account Management Modal (Manage Username & Bio) -->
-    <div class="modal-overlay" id="account-manager-modal">
+    <!-- Spinoffs Modal -->
+    <div class="modal-overlay" id="spinoffs-modal">
         <div class="modal-card">
-            <button class="close-modal" onclick="closeAccountManagerModal()">X</button>
-            <h3 class="modal-title">Account Settings</h3>
-            <p class="error-msg" id="account-error"></p>
-            <div class="input-group">
-                <label class="input-label">DEV WORLD USERNAME</label>
-                <input type="text" id="manage-username" class="input-field" placeholder="Update username...">
+            <button class="close-modal" onclick="closeSpinoffsModal()">X</button>
+            <h3 style="margin: 0; font-size: 22px;">SPINOFFS</h3>
+            <div class="spinoff-card">
+                <img src="images/spinoffs/devworldthegame.png" alt="Dev World The Game" class="spinoff-img" onerror="this.src='https://raw.githubusercontent.com/ThatOneDeveloperDevWorld/devworldsource/main/screenlogin1.png'">
+                <div style="font-size: 18px;">Dev World The Game</div>
+                <div class="coming-soon-badge">COMING SOON</div>
             </div>
-            <div class="input-group">
-                <label class="input-label">BIO</label>
-                <textarea id="manage-bio" class="input-field" placeholder="Write a short bio..." rows="3" style="resize: none;"></textarea>
-            </div>
-            <button class="modal-btn" onclick="handleSaveAccountDetails()">Save Changes</button>
-            <button class="modal-btn" onclick="handleSignOut()" style="background: #ff595e; color: #000000; margin-top: 5px;">Sign Out</button>
-        </div>
-    </div>
-
-    <!-- Settings Modal -->
-    <div class="modal-overlay" id="settings-modal">
-        <div class="modal-card">
-            <button class="close-modal" onclick="closeSettingsModal()">X</button>
-            <h3 class="modal-title">Settings</h3>
-            <button class="modal-btn" onclick="closeSettingsModal()">Close</button>
-        </div>
-    </div>
-
-    <!-- Releases Modal -->
-    <div class="modal-overlay" id="releases-modal">
-        <div class="modal-card" style="max-width: 450px;">
-            <button class="close-modal" onclick="closeReleasesModal()">X</button>
-            <h3 class="modal-title">Latest Release Notes</h3>
-            <div id="releases-content" style="max-height: 250px; overflow-y: auto; font-size: 14px; font-weight: 700; line-height: 1.5; text-align: left; padding: 5px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: var(--text-color);">
-                Loading release notes...
-            </div>
-            <button class="modal-btn" onclick="closeReleasesModal()">Got It</button>
         </div>
     </div>
 
     <script type="module">
-        // 1. Loading Screen Fade Logic & Windows Username Fetching via Tauri API
-        window.addEventListener('DOMContentLoaded', async () => {
-            try {
-                const tauriInvoke = window.__TAURI__?.invoke || window.__TAURI__?.core?.invoke;
-                if (tauriInvoke) {
-                    const winUser = await tauriInvoke("get_windows_username").catch(() => null);
-                    if (winUser) {
-                        document.getElementById("download-path-text").innerText = `C:/Users/${winUser}/Desktop`;
-                        localStorage.setItem("default_windows_user", winUser);
-                    }
-                }
-            } catch (e) {
-                console.log("Could not auto-fetch windows user directly, using fallback");
-            }
-
-            setTimeout(() => {
-                const screen = document.getElementById('loading-screen');
-                screen.style.opacity = '0';
-                setTimeout(() => screen.remove(), 400);
-            }, 1200);
-        });
-
-        // 2. Custom Download Path Selector
-        window.selectDownloadFolder = async function() {
-            try {
-                const dialogPlugin = window.__TAURI__?.dialog || window.__TAURI_PLUGIN_DIALOG__;
-                if (dialogPlugin && dialogPlugin.open) {
-                    const selected = await dialogPlugin.open({ directory: true, multiple: false });
-                    if (selected) {
-                        localStorage.setItem("custom_download_path", selected);
-                        document.getElementById("download-path-text").innerText = selected;
-                    }
-                } else {
-                    const path = prompt("Set Custom Download Path:", "C:/Users/Desktop/DevWorld");
-                    if (path) {
-                        localStorage.setItem("custom_download_path", path);
-                        document.getElementById("download-path-text").innerText = path;
-                    }
-                }
-            } catch (err) {
-                console.error("Failed to pick folder:", err);
-            }
-        };
-
-        const savedPath = localStorage.getItem("custom_download_path");
-        if (savedPath) { 
-            document.getElementById("download-path-text").innerText = savedPath; 
-        }
-
-        // Firebase Configuration & Operations
-        const firebaseConfig = {
-            apiKey: "AIzaSyDlHHkVs9AVAAknCAMknG_dAYzAIU9eGSA",
-            authDomain: "dev-world-c65f5.firebaseapp.com",
-            projectId: "dev-world-c65f5",
-            storageBucket: "dev-world-c65f5.firebasestorage.app",
-            messagingSenderId: "961103609829",
-            appId: "1:961103609829:web:ea87f9d0eb63dfde13790c"
-        };
-
-        if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
-        const db = firebase.firestore();
-        const auth = firebase.auth();
-
         let selectedVersion = "";
         let selectedAssets = [];
-        let isSignUpMode = false;
         let cachedReleasesData = [];
-
-        // Auth State Handler: Strictly queries Firestore for the Dev World username without email/Gmail fallbacks
-        auth.onAuthStateChanged(async (user) => {
-            const accountBtnText = document.getElementById("account-btn-text");
-            if (user) {
-                try {
-                    let userDoc = await db.collection("users").doc(user.uid).get();
-                    if (userDoc.exists && userDoc.data().username) {
-                        accountBtnText.innerText = userDoc.data().username;
-                    } else {
-                        // Query users collection by email field
-                        const querySnapshot = await db.collection("users").where("email", "==", user.email).get();
-                        if (!querySnapshot.empty && querySnapshot.docs[0].data().username) {
-                            accountBtnText.innerText = querySnapshot.docs[0].data().username;
-                        } else {
-                            accountBtnText.innerText = "Account";
-                        }
-                    }
-                } catch (e) {
-                    console.error("Error fetching Dev World username:", e);
-                    accountBtnText.innerText = "Account";
-                }
-            } else {
-                accountBtnText.innerText = "Sign In";
-            }
-        });
-
-        window.openAuthModal = async function() {
-            if (auth.currentUser) {
-                const userDoc = await db.collection("users").doc(auth.currentUser.uid).get();
-                if (userDoc.exists) {
-                    document.getElementById("manage-username").value = userDoc.data().username || "";
-                    document.getElementById("manage-bio").value = userDoc.data().bio || "";
-                }
-                document.getElementById("account-manager-modal").style.display = "flex";
-            } else {
-                document.getElementById("auth-modal").style.display = "flex";
-            }
-        };
-
-        window.closeAuthModal = () => { document.getElementById("auth-modal").style.display = "none"; document.getElementById("auth-error").innerText = ""; };
-        window.closeAccountManagerModal = () => { document.getElementById("account-manager-modal").style.display = "none"; document.getElementById("account-error").innerText = ""; };
-        
-        window.openSettingsModal = () => document.getElementById("settings-modal").style.display = "flex";
-        window.closeSettingsModal = () => document.getElementById("settings-modal").style.display = "none";
-
-        window.toggleAuthMode = function() {
-            isSignUpMode = !isSignUpMode;
-            document.getElementById("modal-heading").innerText = isSignUpMode ? "Create Account" : "Sign In";
-            document.getElementById("auth-submit-btn").innerText = isSignUpMode ? "Sign Up" : "Sign In";
-            document.getElementById("auth-switch-btn").innerText = isSignUpMode ? "Already have an account? Sign in" : "Need an account? Sign up";
-            document.getElementById("username-group").style.display = isSignUpMode ? "flex" : "none";
-            document.getElementById("auth-error").innerText = "";
-        };
-
-        window.handleAuthSubmit = async function() {
-            const email = document.getElementById("auth-email").value.trim();
-            const password = document.getElementById("auth-password").value;
-            const username = document.getElementById("signup-username").value.trim();
-            const errorEl = document.getElementById("auth-error");
-            errorEl.innerText = "";
-
-            if (!email || !password || (isSignUpMode && !username)) {
-                errorEl.innerText = "Please fill in all fields.";
-                return;
-            }
-
-            try {
-                if (isSignUpMode) {
-                    const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                    await db.collection("users").doc(userCredential.user.uid).set({
-                        username: username,
-                        email: email,
-                        bio: "",
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                } else {
-                    await auth.signInWithEmailAndPassword(email, password);
-                }
-                closeAuthModal();
-            } catch (err) {
-                errorEl.innerText = err.message;
-            }
-        };
-
-        window.handleSaveAccountDetails = async function() {
-            const newUsername = document.getElementById("manage-username").value.trim();
-            const newBio = document.getElementById("manage-bio").value.trim();
-            const errorEl = document.getElementById("account-error");
-            errorEl.innerText = "";
-
-            if (!newUsername) {
-                errorEl.innerText = "Username cannot be empty.";
-                return;
-            }
-
-            try {
-                const user = auth.currentUser;
-                if (user) {
-                    await db.collection("users").doc(user.uid).set({
-                        username: newUsername,
-                        bio: newBio,
-                        email: user.email
-                    }, { merge: true });
-                    document.getElementById("account-btn-text").innerText = newUsername;
-                    closeAccountManagerModal();
-                }
-            } catch (err) {
-                errorEl.innerText = err.message;
-            }
-        };
-
-        window.handleSignOut = async function() {
-            await auth.signOut();
-            closeAccountManagerModal();
-        };
-
-        window.toggleTheme = function() {
-            const body = document.body;
-            const themeIcon = document.getElementById("theme-icon");
-            if (body.getAttribute("data-theme") === "dark") {
-                body.setAttribute("data-theme", "light");
-                themeIcon.src = "images/Dark.png";
-            } else {
-                body.setAttribute("data-theme", "dark");
-                themeIcon.src = "images/Light.png";
-            }
-        };
 
         const dropdownBtn = document.getElementById("version-selector-btn");
         const dropdownMenu = document.getElementById("releases-dropdown");
@@ -489,7 +250,6 @@
                 if (Array.isArray(data) && data.length > 0) {
                     cachedReleasesData = data.map(rel => ({
                         tag: rel.tag_name,
-                        body: rel.body,
                         assets: rel.assets.map(a => ({ name: a.name, url: a.browser_download_url }))
                     }));
 
@@ -512,68 +272,108 @@
                         dropdownMenu.appendChild(item);
                     });
                 } else {
-                    document.getElementById("current-version-text").innerText = "v1.0.0";
-                    selectedVersion = "v1.0.0";
+                    document.getElementById("current-version-text").innerText = "v0.2.0";
+                    selectedVersion = "v0.2.0";
                 }
             } catch (err) {
-                console.error("Failed to fetch releases from API:", err);
-                document.getElementById("current-version-text").innerText = "v1.0.0";
-                selectedVersion = "v1.0.0";
+                console.error("Failed to fetch GitHub releases:", err);
+                document.getElementById("current-version-text").innerText = "v0.2.0";
+                selectedVersion = "v0.2.0";
             }
         }
         loadReleases();
 
-        window.openReleasesModal = function() {
-            const modal = document.getElementById("releases-modal");
-            const contentEl = document.getElementById("releases-content");
-            if (cachedReleasesData.length > 0) {
-                const latest = cachedReleasesData[0];
-                contentEl.innerHTML = `<strong>Version:</strong> ${latest.tag}<br><br><strong>Notes:</strong><br>${latest.body ? latest.body.replace(/\n/g, '<br>') : 'No notes provided.'}`;
-            } else {
-                contentEl.innerHTML = "No release notes found.";
-            }
-            modal.style.display = "flex";
-        };
-
-        window.closeReleasesModal = () => document.getElementById("releases-modal").style.display = "none";
-                
-        document.getElementById("open-btn").onclick = async () => {
-            if (!selectedVersion || !selectedAssets.length) {
-                alert("Please select a valid version first!");
-                return;
-            }
-
-            const playBtn = document.getElementById("open-btn");
+        // Launch Command Integration
+        document.getElementById("play-btn").onclick = async () => {
+            const playBtn = document.getElementById("play-btn");
             playBtn.innerText = "LAUNCHING...";
 
             try {
-                const tauriInvoke = window.__TAURI__?.invoke || 
-                                    window.__TAURI__?.core?.invoke || 
-                                    (window.__TAURI_INTERNALS__ && window.__TAURI_INTERNALS__.invoke);
-
+                const tauriInvoke = window.__TAURI__?.invoke || window.__TAURI__?.core?.invoke;
                 if (!tauriInvoke) {
-                    throw new Error("Tauri invoke API is not available in this window environment.");
+                    throw new Error("Tauri IPC bridge unavailable.");
                 }
-
-                const customPath = localStorage.getItem("custom_download_path") || "";
 
                 const entryPointPath = await tauriInvoke("launch_version", {
                     versionTag: selectedVersion,
-                    assets: selectedAssets,
-                    downloadPath: customPath
+                    assets: selectedAssets
                 });
 
-                const convertSrc = window.__TAURI__?.convertFileSrc || 
-                                   window.__TAURI__?.core?.convertFileSrc;
-
-                const assetUrl = convertSrc 
-                    ? convertSrc(entryPointPath) 
-                    : `http://asset.localhost/${entryPointPath}`;
-
+                const convertSrc = window.__TAURI__?.convertFileSrc || window.__TAURI__?.core?.convertFileSrc;
+                const assetUrl = convertSrc ? convertSrc(entryPointPath) : `http://asset.localhost/${entryPointPath}`;
                 window.location.href = assetUrl;
             } catch (err) {
-                alert("Error launching version: " + (err.message || err));
+                alert("Launch error: " + (err.message || err));
                 playBtn.innerText = "PLAY";
+            }
+        };
+
+        // Installations Logic
+        window.openInstallationsModal = async function() {
+            const modal = document.getElementById("installations-modal");
+            const listEl = document.getElementById("installations-list");
+            listEl.innerHTML = "Loading...";
+
+            try {
+                const tauriInvoke = window.__TAURI__?.invoke || window.__TAURI__?.core?.invoke;
+                if (tauriInvoke) {
+                    const installed = await tauriInvoke("get_installed_versions");
+                    if (installed.length === 0) {
+                        listEl.innerHTML = "<div style='text-align:center;'>No versions downloaded yet.</div>";
+                    } else {
+                        listEl.innerHTML = "";
+                        installed.forEach(ver => {
+                            const item = document.createElement("div");
+                            item.className = "install-item";
+                            item.innerHTML = `<span>${ver}</span>`;
+                            const delBtn = document.createElement("button");
+                            delBtn.className = "del-btn";
+                            delBtn.innerText = "DELETE";
+                            delBtn.onclick = () => deleteVersion(ver);
+                            item.appendChild(delBtn);
+                            listEl.appendChild(item);
+                        });
+                    }
+                } else {
+                    listEl.innerHTML = "Tauri API not connected.";
+                }
+            } catch (e) {
+                listEl.innerHTML = "Error fetching installations.";
+            }
+
+            modal.style.display = "flex";
+        };
+
+        window.deleteVersion = async function(ver) {
+            if (!confirm(`Delete ${ver}?`)) return;
+            try {
+                const tauriInvoke = window.__TAURI__?.invoke || window.__TAURI__?.core?.invoke;
+                if (tauriInvoke) {
+                    await tauriInvoke("delete_version", { versionTag: ver });
+                    openInstallationsModal();
+                }
+            } catch (err) {
+                alert("Failed to delete: " + err);
+            }
+        };
+
+        window.closeInstallationsModal = () => document.getElementById("installations-modal").style.display = "none";
+
+        // Spinoffs Modal Controls
+        window.openSpinoffsModal = () => document.getElementById("spinoffs-modal").style.display = "flex";
+        window.closeSpinoffsModal = () => document.getElementById("spinoffs-modal").style.display = "none";
+
+        // Discord Button Handler (Opens System Browser)
+        window.openDiscord = async function() {
+            try {
+                const tauriInvoke = window.__TAURI__?.invoke || window.__TAURI__?.core?.invoke;
+                if (tauriInvoke) {
+                    await tauriInvoke("open_discord_link");
+                } else {
+                    window.open('https://discord.gg/hDqN8MPTkj', '_blank');
+                }
+            } catch (e) {
+                window.open('https://discord.gg/hDqN8MPTkj', '_blank');
             }
         };
     </script>
