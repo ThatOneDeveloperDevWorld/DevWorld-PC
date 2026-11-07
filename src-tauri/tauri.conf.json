@@ -1,19 +1,19 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/schema.json",
-  "productName": "Dev World PC",
-  "version": "1.0.0",
-  "identifier": "com.thatonedev.devworldpc",
+  "productName": "Dev World",
+  "version": "0.1.0",
+  "identifier": "dev.devworlddevelopers.devworldlauncher",
   "build": {
     "frontendDist": "../res/main"
   },
   "app": {
     "windows": [
       {
-        "title": "Dev World PC",
+        "title": "Dev World - make and play",
         "width": 900,
         "height": 550,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": true
       }
     ],
     "security": {
@@ -28,7 +28,7 @@
     "active": true,
     "targets": "all",
     "icon": [
-      "../res/main/images/launcher.png"
+      "../required/assets/creditable/logos/devworlddevelopers/devworldlauncherlogo.png"
     ]
   }
 }
